@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="minimal">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式閱讀測驗 - 會說話的路：導盲磚</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ===== 配色：classic（原本藍綠）與 minimal（簡約：墨藍、米白、橘色重點） ===== */
+        :root {
+            --bg: #F0F4F8; --surface: #FFFFFF; --surface2: #F0F4F8; --ink: #2D3748; --muted: #5A6577; --line: #D1D5DB;
+            --primary: #38A3A5; --primary-hover: #2C8A8C; --on-primary: #FFFFFF;
+            --secondary: #A0AEC0; --secondary-hover: #718096;
+            --select-bg: #E0F2F1; --select-line: #80CBC4;
+            --good: #15803D; --good-bg: #DCFCE7; --good-line: #4ADE80;
+            --bad: #B91C1C; --bad-bg: #FEE2E2; --bad-line: #F87171;
+            --hint: #92400E; --hint-bg: #FFFBEB; --hint-line: #FCD34D; --hint-pill: #F59E0B;
+            --evidence: #FDE68A; --marker: #FEF08A; --speak: #38A3A5; --speak-bg: #E0F2F1;
+            --tip-bg: #DBEAFE; --tip-line: #3B82F6; --tip-ink: #1D4ED8;
+            --radius: 0.75rem; --shadow: 0 10px 15px -3px rgba(45,55,72,.1), 0 4px 6px -2px rgba(45,55,72,.05); --card-border: 0px;
+            --font-body: 'Inter', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+            --font-title: 'Inter', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+        }
+        [data-theme="minimal"] {
+            --bg: #F7F5F0; --surface: #FDFCF9; --surface2: #ECE8DF; --ink: #1C2B39; --muted: #4B5866; --line: #D9D3C7;
+            --primary: #1C2B39; --primary-hover: #2A3F52; --on-primary: #F7F5F0;
+            --secondary: #4B5866; --secondary-hover: #1C2B39;
+            --select-bg: #F3DCCB; --select-line: #B4561E;
+            --good: #2F7A4B; --good-bg: #DCEFE2; --good-line: #2F7A4B;
+            --bad: #B3261E; --bad-bg: #F7DEDB; --bad-line: #B3261E;
+            --hint: #8A3F12; --hint-bg: #FBF1E8; --hint-line: #E8B48C; --hint-pill: #B4561E;
+            --evidence: #F3C9A8; --marker: #F6E3A1; --speak: #2F6F73; --speak-bg: #E3EEEE;
+            --tip-bg: #ECE8DF; --tip-line: #B4561E; --tip-ink: #1C2B39;
+            --radius: 18px; --shadow: none; --card-border: 1.5px;
+            --font-body: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+            --font-title: 'Noto Serif TC', 'PMingLiU', serif;
+        }
+
+        body { font-family: var(--font-body); background-color: var(--bg); color: var(--ink); }
+        h1 { font-family: var(--font-title); color: var(--ink); letter-spacing: 0.02em; }
+        .muted { color: var(--muted); }
+        .card {
+            background-color: var(--surface); padding: 2rem; border-radius: var(--radius);
+            box-shadow: var(--shadow); border: var(--card-border) solid var(--line); position: relative;
+        }
+        .field { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); border-radius: 0.5rem; }
+        input[type="range"] { accent-color: var(--primary); }
+
+        /* 文章 */
+        .article-content p {
+            margin-bottom: 1rem;
+            font-size: var(--article-font-size, 1.0625rem);
+            line-height: var(--article-line-height, 1.85);
+            transition: font-size 0.2s, line-height 0.2s, background-color 0.3s;
+        }
+        .tips { background: var(--tip-bg); border-left: 4px solid var(--tip-line); color: var(--tip-ink); border-radius: 0 0.5rem 0.5rem 0; }
+        .sentence { cursor: pointer; border-radius: 0.2rem; transition: background-color 0.15s; }
+        @media (hover: hover) { .sentence:hover { text-decoration: underline dotted var(--speak); text-underline-offset: 4px; } }
+        .highlight { background-color: var(--marker); }
+        .reading-underline { text-decoration: underline solid var(--speak) 2px; text-underline-offset: 4px; }
+        .reading-paragraph { background-color: var(--speak-bg); border-radius: 0.25rem; }
+        .hint-paragraph { background-color: var(--hint-bg); border-radius: 0.25rem; box-shadow: 0 0 0 3px var(--hint-line); }
+        .evidence-sentence { background-color: var(--evidence); }
+        .tap-hint { display: inline-block; font-size: 0.8rem; color: var(--speak); background: var(--speak-bg); border-radius: 999px; padding: 0.1rem 0.7rem; }
+
+        /* 按鈕 */
+        .btn {
+            padding: 0.75rem 1.5rem; border-radius: 0.6rem; font-weight: 600; cursor: pointer; border: none;
+            transition: background-color 0.2s, transform 0.1s, opacity 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; text-align: center;
+        }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn:active:not(:disabled) { transform: translateY(1px); }
+        .btn-primary { background-color: var(--primary); color: var(--on-primary); }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: var(--secondary); color: var(--on-primary); }
+        .btn-secondary:hover:not(:disabled) { background-color: var(--secondary-hover); }
+        .btn-outline { background-color: var(--surface); color: var(--ink); border: 1.5px solid var(--ink); }
+        .btn-outline:hover:not(:disabled) { background-color: var(--surface2); }
+        .tool-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem; height: 44px; padding: 0 0.9rem; border-radius: 999px;
+            background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); font-weight: 600; font-size: 0.95rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06); cursor: pointer;
+        }
+        .tool-btn:hover { background: var(--surface2); }
+        .tool-btn.icon { width: 44px; padding: 0; justify-content: center; }
+        button:focus-visible, input:focus-visible, select:focus-visible, label:focus-within { outline: 3px solid var(--select-line); outline-offset: 2px; }
+
+        /* 選項 */
+        .option-label {
+            display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+            padding: 0.5rem 0.5rem 0.5rem 1rem; border: 1.5px solid var(--line); border-radius: 0.75rem;
+            background: var(--surface); cursor: pointer; transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
+        }
+        .option-label:hover { background-color: var(--surface2); }
+        .option-label.selected { background-color: var(--select-bg); border-color: var(--select-line); }
+        .option-label.correct { background-color: var(--good-bg); border-color: var(--good-line); }
+        .option-label.incorrect { background-color: var(--bad-bg); border-color: var(--bad-line); }
+        .option-label.eliminated { background-color: var(--surface2); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
+        .option-label.eliminated .option-text { text-decoration: line-through; }
+        .custom-radio {
+            appearance: none; -webkit-appearance: none; width: 1.25em; height: 1.25em; flex-shrink: 0;
+            border: 2px solid var(--muted); border-radius: 50%; cursor: pointer; margin-right: 0.6em; position: relative;
+        }
+        .custom-radio:checked { background-color: var(--primary); border-color: var(--primary); }
+        .custom-radio:checked::before {
+            content: ''; display: block; width: 0.5em; height: 0.5em; background-color: var(--on-primary);
+            border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+
+        /* 回饋 */
+        .fb { border-radius: 0.6rem; padding: 0.85rem 1rem; }
+        .fb-ok { background: var(--good-bg); color: var(--good); }
+        .fb-no { background: var(--bad-bg); color: var(--bad); }
+        .fb-hint { background: var(--hint-bg); color: var(--hint); border: 1.5px solid var(--hint-line); }
+        .pill { display: inline-block; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; color: var(--on-primary); background: var(--hint-pill); border-radius: 999px; padding: 0.1rem 0.6rem; margin-right: 0.4rem; vertical-align: 0.1em; }
+
+        /* 報讀鈕：圖示 20px，可點範圍 40px */
+        .read-aloud-btn {
+            background: none; border: none; cursor: pointer; flex-shrink: 0;
+            width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px;
+        }
+        .read-aloud-btn:hover { background: var(--surface2); }
+        .read-aloud-btn svg { width: 22px; height: 22px; fill: var(--muted); transition: fill 0.2s; }
+        .read-aloud-btn:hover svg { fill: var(--speak); }
+
+        /* ===== 版面：閱讀 → 作答（文章收起，可按「顯示文章」）→ 結果 ===== */
+        #app { width: 100%; max-width: 48rem; margin: 0 auto; }
+        .phase-quiz #article-section, .phase-score #article-section { display: none; }
+        .phase-quiz.article-open #article-section { display: block; }
+        .phase-quiz #article-section .reading-only { display: none; }
+        .quiz-only { display: none; }
+        .phase-quiz .quiz-only { display: flex; }
+        @media (min-width: 768px) {
+            .phase-quiz.article-open #app { max-width: 76rem; display: grid; grid-template-columns: 3fr 2fr; gap: 1.75rem; align-items: start; }
+            .phase-quiz.article-open #article-section { position: sticky; top: 4.5rem; max-height: calc(100vh - 5.5rem); overflow-y: auto; margin: 0; }
+        }
+        @media (max-width: 767px) {
+            .card { padding: 1.25rem; }
+            .phase-quiz.article-open #article-section { position: fixed; inset: 0; z-index: 40; overflow-y: auto; border-radius: 0; margin: 0; padding-top: 4.5rem; }
+        }
+    </style>
+</head>
+<body class="phase-reading min-h-screen flex flex-col items-center p-4 sm:p-6 pt-20 sm:pt-20">
+
+    <!-- 固定工具列：顯示文章（作答時）＋ 設定 -->
+    <div id="toolbar" class="fixed top-3 right-3 z-50 flex gap-2">
+        <button id="toggle-article-btn" class="tool-btn quiz-only" aria-pressed="false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 10h16M4 15h10M4 20h8"/></svg>
+            <span id="toggle-article-label">顯示文章</span>
+        </button>
+        <button id="settings-btn" class="tool-btn icon" aria-label="開啟設定">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        </button>
+    </div>
+
+    <div id="settings-panel" class="hidden fixed top-16 right-3 z-50 card w-72" style="padding:1.25rem">
+        <div class="mb-4">
+            <label for="speech-rate" class="flex justify-between items-center text-sm font-medium mb-1">
+                <span>報讀語速</span><span id="speech-rate-value" class="text-xs px-2 py-0.5 rounded-full" style="background:var(--surface2)">1.0x</span>
+            </label>
+            <div class="flex items-center gap-2"><span class="text-xs muted">慢</span><input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1" class="w-full cursor-pointer"><span class="text-xs muted">快</span></div>
+        </div>
+        <div class="mb-4">
+            <label for="font-size-slider" class="flex justify-between items-center text-sm font-medium mb-1">
+                <span>字體大小</span><span id="font-size-value" class="text-xs px-2 py-0.5 rounded-full" style="background:var(--surface2)">17px</span>
+            </label>
+            <div class="flex items-center gap-2"><span class="text-xs muted">小</span><input type="range" id="font-size-slider" min="14" max="26" step="1" value="17" class="w-full cursor-pointer"><span class="text-xs muted">大</span></div>
+        </div>
+        <div class="mb-4">
+            <label for="line-height-slider" class="flex justify-between items-center text-sm font-medium mb-1">
+                <span>行距</span><span id="line-height-value" class="text-xs px-2 py-0.5 rounded-full" style="background:var(--surface2)">1.85</span>
+            </label>
+            <div class="flex items-center gap-2"><span class="text-xs muted">密</span><input type="range" id="line-height-slider" min="1.5" max="2.5" step="0.05" value="1.85" class="w-full cursor-pointer"><span class="text-xs muted">寬</span></div>
+        </div>
+        <div class="pt-3" style="border-top:1.5px solid var(--line)">
+            <p class="text-xs font-bold muted mb-2">老師設定</p>
+            <label for="mode-select" class="block text-sm font-medium mb-1">作答模式</label>
+            <select id="mode-select" class="field w-full px-2 py-1.5 text-sm mb-3">
+                <option value="practice">練習：答錯先給提示</option>
+                <option value="test">測驗：答完立即公布</option>
+            </select>
+            <button id="copy-content-btn" class="btn btn-outline w-full" style="padding:0.5rem 1rem;font-size:0.9rem">複製文章與題目</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <div id="article-section" class="card mb-8">
+            <div class="quiz-only justify-between items-center mb-4">
+                <span class="text-sm muted">原文（作答時可以回來找答案）</span>
+                <button id="close-article-btn" class="btn btn-outline" style="padding:0.45rem 1rem;font-size:0.9rem">回到題目</button>
+            </div>
+            <h1 id="article-title" class="text-3xl font-bold mb-5 text-center"></h1>
+
+            <details id="tips" class="tips p-4 mb-6 reading-only" open>
+              <summary class="font-bold cursor-pointer">使用技巧</summary>
+              <ul class="list-disc list-inside mt-2 text-base space-y-1">
+                <li><b>點段落旁的喇叭：</b>朗讀整個段落。</li>
+                <li><b>點一下句子：</b>朗讀這一句，朗讀時會加上底線。</li>
+                <li><b>連點兩下句子：</b>劃上重點，再連點兩下可以取消。</li>
+              </ul>
+            </details>
+
+            <div id="start-block" class="reading-only mb-2">
+                <div class="flex items-center gap-2 mb-3">
+                    <label for="student-name" class="text-sm font-medium muted whitespace-nowrap">姓名／座號</label>
+                    <input id="student-name" type="text" autocomplete="off" placeholder="選填，會寫進作答紀錄" class="field flex-1 min-w-0 px-3 py-2 text-sm">
+                </div>
+            </div>
+
+            <div id="article-content" class="article-content"></div>
+
+            <div id="article-controls" class="reading-only mt-4 space-y-2">
+                <div id="para-progress-row" class="hidden items-center justify-between text-sm">
+                    <span id="para-progress" class="muted"></span>
+                    <span class="tap-hint">點句子就能聽</span>
+                </div>
+                <button id="next-paragraph-btn" class="btn btn-primary w-full">閱讀文章</button>
+                <button id="start-quiz-btn" class="btn btn-primary w-full hidden">讀完了，開始作答</button>
+            </div>
+            <p id="article-source" class="text-xs muted mt-4 text-right hidden"></p>
+        </div>
+
+        <div id="interactive-column" class="hidden">
+            <div id="quiz-section" class="card hidden">
+                <div class="mb-5">
+                    <p class="text-sm muted" id="question-counter"></p>
+                    <div id="question-header" class="flex items-start gap-1">
+                         <h2 id="question-text" class="text-xl font-semibold my-2 flex-1"></h2>
+                    </div>
+                </div>
+                <div id="options-container" class="space-y-3 mb-5"></div>
+                <div id="feedback-section" class="fb mb-4 hidden"></div>
+                <div class="flex justify-end">
+                    <button id="submit-answer-btn" class="btn btn-primary">提交答案</button>
+                    <button id="next-question-btn" class="btn btn-primary hidden">下一題</button>
+                </div>
+            </div>
+
+            <div id="score-section" class="card hidden text-center">
+                <h2 class="text-2xl font-bold mb-4">測驗完成！</h2>
+                <p id="score-text" class="text-xl mb-2"></p>
+                <p id="score-sub" class="text-sm muted mb-4"></p>
+                <ul id="score-detail" class="text-left text-sm space-y-1 mb-6"></ul>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <button id="restart-quiz-btn" class="btn btn-primary w-full sm:w-auto">重新測驗</button>
+                    <button id="download-summary-btn" class="btn btn-outline w-full sm:w-auto">下載作答摘要</button>
+                    <button id="download-log-btn" class="btn btn-outline w-full sm:w-auto">下載操作紀錄</button>
+                </div>
+                <p class="text-xs muted mt-3">檔案為 CSV，可用 Excel 開啟。</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-6 px-4" style="font-size:12px;color:var(--muted)">
+        © 2025 特教米克師&nbsp;&nbsp;
+        本作品採用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh_TW" target="_blank" class="underline">CC BY-NC-SA 4.0 創用CC授權</a>。&nbsp;&nbsp;
+        歡迎非商業用途轉載、引用或改編，請保留「特教米克師」署名，並附上本作品原始連結。
+    </footer>
+
+    <script>
+    /* 由 build_page.py 填入：
+       { title, source, waitSeconds, mode: "practice"|"test", theme, paragraphs: [...],
+         questions: [{ question, options:{A..D}, correctAnswer, explanation, evidence?: { paragraph, sentence } }] } */
+    const QUIZ = {"title": "會說話的路：導盲磚", "source": "範例短文", "waitSeconds": 10, "mode": "practice", "theme": "minimal", "paragraphs": ["走在人行道或捷運站裡，你可能注意過地上有一排黃色、表面凹凸不平的磚。它叫做「導盲磚」，是為視覺障礙者設計的。看得見的人很少注意它，但對看不見的人來說，它就像一條會說話的路。", "導盲磚是日本人三宅精一發明的。他有一位視力越來越差的朋友，常常在路上找不到方向。三宅精一想，如果地面能用腳摸得出來，或許就能幫助朋友安全出門。1967年，第一批導盲磚鋪在日本岡山一所盲校附近的路口。", "導盲磚主要分成兩種。表面是一條一條長線的「線狀磚」，告訴人「可以順著這個方向往前走」；表面是一顆一顆圓點的「點狀磚」，則是提醒人「停下來注意」，通常鋪在樓梯口、路口或月台邊。視障者用腳底或手杖碰觸，就能分辨出兩種磚。", "許多導盲磚會做成鮮豔的黃色，這也有原因。不少視障者並不是完全看不見，而是視力很弱，只看得到模糊的形狀和顏色。黃色和灰色地面的對比很大，可以讓他們更容易看出路線。", "可惜的是，導盲磚常常被機車、招牌或雜物擋住。對我們來說只是繞一下路，對視障者卻可能撞傷或迷路。導盲磚提醒我們，一座城市好不好走，不只看路有多寬，也要看每一個人是不是都能安心走在上面。"], "questions": [{"question": "第一批導盲磚鋪在哪裡？", "options": {"A": "日本岡山一所盲校附近的路口", "B": "台北捷運站的月台邊", "C": "三宅精一家門前的人行道", "D": "東京最熱鬧的十字路口"}, "correctAnswer": "A", "explanation": "文章第二段提到：「1967年，第一批導盲磚鋪在日本岡山一所盲校附近的路口。」", "evidence": {"paragraph": 2, "sentence": "第一批導盲磚鋪在日本岡山一所盲校附近的路口"}}, {"question": "樓梯口鋪的「點狀磚」，是要告訴視障者什麼？", "options": {"A": "可以順著這個方向往前走", "B": "這裡是捷運站的出口", "C": "前面的路比較寬", "D": "停下來注意"}, "correctAnswer": "D", "explanation": "文章第三段說明，表面是圓點的「點狀磚」是提醒人「停下來注意」；可以往前走的是「線狀磚」。", "evidence": {"paragraph": 3, "sentence": "表面是一顆一顆圓點的「點狀磚」，則是提醒人「停下來注意」"}}, {"question": "導盲磚做成黃色，主要是想幫助哪些人？", "options": {"A": "晚上走路的一般行人", "B": "視力很弱、還看得到顏色的人", "C": "完全看不見的人", "D": "負責鋪路的工人"}, "correctAnswer": "B", "explanation": "文章第四段提到，不少視障者「只看得到模糊的形狀和顏色」，黃色和灰色地面對比大，可以讓他們更容易看出路線。完全看不見的人是靠腳底或手杖分辨，不是靠顏色。", "evidence": {"paragraph": 4, "sentence": "黃色和灰色地面的對比很大，可以讓他們更容易看出路線"}}, {"question": "作者寫這篇文章，最想告訴讀者什麼？", "options": {"A": "發明導盲磚的三宅精一非常了不起", "B": "黃色是路上最容易看見的顏色", "C": "好走的城市要讓每個人都能安心行走", "D": "機車不應該停在人行道上"}, "correctAnswer": "C", "explanation": "文章最後一段總結：「一座城市好不好走，不只看路有多寬，也要看每一個人是不是都能安心走在上面。」", "evidence": {"paragraph": 5, "sentence": "也要看每一個人是不是都能安心走在上面"}}]};
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const PARAGRAPH_WAIT_SECONDS = Number.isFinite(QUIZ.waitSeconds) ? QUIZ.waitSeconds : 20;
+            const quizData = QUIZ.questions;
+            const MAX_HINTS = 2;
+            const STORAGE_KEY = 'reading_quiz_records';
+            const DEFAULT_FONT = 17, DEFAULT_LINE = 1.85;
+
+            const SPEAKER_SVG = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>`;
+
+            const $ = (id) => document.getElementById(id);
+            const body = document.body;
+            const articleSection = $('article-section');
+            const articleContent = $('article-content');
+            const nextParagraphBtn = $('next-paragraph-btn');
+            const startQuizBtn = $('start-quiz-btn');
+            const interactiveColumn = $('interactive-column');
+            const quizSection = $('quiz-section');
+            const questionCounter = $('question-counter');
+            const questionHeader = $('question-header');
+            const questionText = $('question-text');
+            const optionsContainer = $('options-container');
+            const submitAnswerBtn = $('submit-answer-btn');
+            const nextQuestionBtn = $('next-question-btn');
+            const feedbackSection = $('feedback-section');
+            const scoreSection = $('score-section');
+            const speechRateSlider = $('speech-rate');
+            const speechRateValue = $('speech-rate-value');
+            const settingsBtn = $('settings-btn');
+            const settingsPanel = $('settings-panel');
+            const fontSizeSlider = $('font-size-slider');
+            const lineHeightSlider = $('line-height-slider');
+            const modeSelect = $('mode-select');
+            const studentName = $('student-name');
+            const toggleArticleBtn = $('toggle-article-btn');
+
+            let paragraphs;
+            let currentQuestionIndex = 0;
+            let selectedOptionElement = null;
+            let currentParagraphIndex = -1;
+            let countdownInterval;
+            const synth = window.speechSynthesis;
+            let speechRate = 1;
+            let mode = QUIZ.mode === 'test' ? 'test' : 'practice';
+
+            /* ---------- 作答紀錄 ---------- */
+            let session, eventLog, qStats;
+            function newSession() {
+                session = { startedAt: new Date(), mode };
+                eventLog = [];
+                qStats = quizData.map(() => ({ attempts: 0, hints: 0, choices: [], firstTry: false, finalCorrect: false, revealed: false, shownAt: null, seconds: 0, lookbacks: 0 }));
+            }
+            function logEvent(type, detail = {}) {
+                const now = new Date();
+                eventLog.push({ time: now.toLocaleString('zh-TW', { hour12: false }), sec: ((now - session.startedAt) / 1000).toFixed(1), type, ...detail });
+            }
+            if (!studentName.value && window.spedStudentId) studentName.value = window.spedStudentId;
+            modeSelect.value = mode;
+            newSession();
+
+            /* ---------- 階段切換 ---------- */
+            function setPhase(phase) {
+                body.classList.remove('phase-reading', 'phase-quiz', 'phase-score');
+                body.classList.add(`phase-${phase}`);
+                if (phase !== 'quiz') setArticleOpen(false, null);
+            }
+            function setArticleOpen(open, trigger) {
+                const wasOpen = body.classList.contains('article-open');
+                body.classList.toggle('article-open', open);
+                toggleArticleBtn.setAttribute('aria-pressed', open);
+                $('toggle-article-label').textContent = open ? '隱藏文章' : '顯示文章';
+                if (trigger && wasOpen !== open && body.classList.contains('phase-quiz')) {
+                    if (open) qStats[currentQuestionIndex].lookbacks++;
+                    logEvent(open ? '開啟文章' : '關閉文章', { question: currentQuestionIndex + 1, detail: trigger });
+                }
+            }
+
+            /* ---------- 語音：長文字切成句子依序唸，避免瀏覽器唸到一半中斷 ---------- */
+            function splitForSpeech(text) {
+                return (text.match(/[^。！？；]+[。！？；」』]*/g) || [text]).map(s => s.trim()).filter(Boolean);
+            }
+            function speak(text, { onstart, onend } = {}) {
+                if (!synth) return;
+                synth.cancel();
+                const parts = splitForSpeech(text);
+                parts.forEach((part, i) => {
+                    const u = new SpeechSynthesisUtterance(part);
+                    u.lang = 'zh-TW';
+                    u.rate = speechRate;
+                    if (i === 0 && onstart) u.onstart = onstart;
+                    if (i === parts.length - 1 && onend) { u.onend = onend; u.onerror = onend; }
+                    synth.speak(u);
+                });
+            }
+            function stopSpeech() { if (synth && (synth.speaking || synth.pending)) synth.cancel(); }
+
+            /* ---------- 文章 ---------- */
+            function renderArticle() {
+                $('article-title').textContent = QUIZ.title;
+                articleContent.innerHTML = '';
+                QUIZ.paragraphs.forEach(text => {
+                    const p = document.createElement('p');
+                    p.textContent = text;
+                    articleContent.appendChild(p);
+                });
+                if (QUIZ.source) {
+                    const src = $('article-source');
+                    src.textContent = QUIZ.source;
+                    src.classList.remove('hidden');
+                }
+            }
+
+            function addParagraphReadAloudButtons() {
+                Array.from(articleContent.querySelectorAll('p')).forEach((p, pi) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'paragraph-wrapper flex items-start gap-1 mb-4';
+
+                    const button = document.createElement('button');
+                    button.className = 'read-aloud-btn';
+                    button.style.marginTop = '-0.35rem';
+                    button.innerHTML = SPEAKER_SVG;
+                    button.setAttribute('aria-label', `唸讀第 ${pi + 1} 段`);
+                    button.onclick = () => {
+                        logEvent('朗讀段落', { paragraph: pi + 1, question: quizStage() });
+                        document.querySelectorAll('.reading-paragraph').forEach(el => el.classList.remove('reading-paragraph'));
+                        p.classList.add('reading-paragraph');
+                        speak(p.textContent, { onend: () => p.classList.remove('reading-paragraph') });
+                    };
+
+                    p.style.marginBottom = '0';
+                    p.dataset.p = pi + 1;
+                    p.parentNode.insertBefore(wrapper, p);
+                    wrapper.appendChild(button);
+                    wrapper.appendChild(p);
+                });
+            }
+
+            function segmentSentences() {
+                articleContent.querySelectorAll('p').forEach(p => {
+                    if (p.querySelector('.sentence')) return;
+                    const sentences = p.textContent.match(/[^,、，。！？]+[,、，。！？」』]*/g) || [];
+                    p.innerHTML = '';
+                    sentences.forEach((sentenceText, si) => {
+                        const span = document.createElement('span');
+                        span.textContent = sentenceText;
+                        span.className = 'sentence';
+                        span.dataset.p = p.dataset.p;
+                        span.dataset.s = si + 1;
+                        p.appendChild(span);
+                    });
+                });
+            }
+
+            function quizStage() { return body.classList.contains('phase-quiz') ? currentQuestionIndex + 1 : ''; }
+
+            function initializeArticle() {
+                paragraphs = Array.from(articleContent.querySelectorAll('.paragraph-wrapper'));
+                paragraphs.forEach(wrapper => wrapper.classList.add('hidden'));
+                currentParagraphIndex = -1;
+                nextParagraphBtn.classList.remove('hidden');
+                nextParagraphBtn.disabled = false;
+                nextParagraphBtn.textContent = '閱讀文章';
+                startQuizBtn.classList.add('hidden');
+                $('start-block').classList.remove('hidden');
+                $('para-progress-row').classList.add('hidden');
+                $('para-progress-row').classList.remove('flex');
+                $('tips').open = true;
+            }
+
+            function startCountdown(button, seconds) {
+                clearInterval(countdownInterval);
+                if (seconds <= 0) { button.disabled = false; button.textContent = '顯示下一段'; return; }
+                button.disabled = true;
+                let remaining = seconds;
+                button.textContent = `請稍候 (${remaining})`;
+                countdownInterval = setInterval(() => {
+                    remaining--;
+                    if (remaining > 0) {
+                        button.textContent = `請稍候 (${remaining})`;
+                    } else {
+                        clearInterval(countdownInterval);
+                        button.disabled = false;
+                        button.textContent = '顯示下一段';
+                    }
+                }, 1000);
+            }
+
+            function showNextParagraph() {
+                stopSpeech();
+                if (nextParagraphBtn.disabled) return;
+
+                if (currentParagraphIndex === -1) {
+                    newSession();
+                    logEvent('開始閱讀', { detail: `模式：${modeLabel()}` });
+                    $('start-block').classList.add('hidden');
+                    $('para-progress-row').classList.remove('hidden');
+                    $('para-progress-row').classList.add('flex');
+                }
+
+                currentParagraphIndex++;
+                if (currentParagraphIndex < paragraphs.length) {
+                    const paragraphWrapper = paragraphs[currentParagraphIndex];
+                    paragraphWrapper.classList.remove('hidden');
+                    paragraphWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    $('para-progress').textContent = `第 ${currentParagraphIndex + 1} / ${paragraphs.length} 段`;
+                    logEvent('顯示段落', { paragraph: currentParagraphIndex + 1 });
+                    if (currentParagraphIndex < paragraphs.length - 1) {
+                        startCountdown(nextParagraphBtn, PARAGRAPH_WAIT_SECONDS);
+                    }
+                }
+                if (currentParagraphIndex >= paragraphs.length - 1) {
+                    clearInterval(countdownInterval);
+                    nextParagraphBtn.classList.add('hidden');
+                    startQuizBtn.classList.remove('hidden');
+                }
+            }
+
+            /* ---------- 測驗 ---------- */
+            function modeLabel() { return mode === 'practice' ? '練習' : '測驗'; }
+
+            function makeReadButton(label, getText, eventName, extra = {}) {
+                const btn = document.createElement('button');
+                btn.className = 'read-aloud-btn';
+                btn.innerHTML = SPEAKER_SVG;
+                btn.setAttribute('aria-label', label);
+                btn.onclick = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    logEvent(eventName, { question: currentQuestionIndex + 1, ...extra });
+                    speak(getText());
+                };
+                return btn;
+            }
+
+            function startQuiz() {
+                stopSpeech();
+                clearInterval(countdownInterval);
+                setPhase('quiz');
+                interactiveColumn.classList.remove('hidden');
+                quizSection.classList.remove('hidden');
+                scoreSection.classList.add('hidden');
+                currentQuestionIndex = 0;
+                modeSelect.disabled = true;
+                modeSelect.title = '作答開始後不能切換模式，重新測驗時可以再選';
+                logEvent('開始作答', { detail: `模式：${modeLabel()}` });
+                loadQuestion();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function clearHintMarks() {
+                document.querySelectorAll('.hint-paragraph').forEach(el => el.classList.remove('hint-paragraph'));
+                document.querySelectorAll('.evidence-sentence').forEach(el => el.classList.remove('evidence-sentence'));
+            }
+
+            function loadQuestion() {
+                resetQuestionState();
+                clearHintMarks();
+                setArticleOpen(false, null);
+                const currentQuestion = quizData[currentQuestionIndex];
+                qStats[currentQuestionIndex].shownAt = Date.now();
+                logEvent('顯示題目', { question: currentQuestionIndex + 1 });
+                questionCounter.textContent = `第 ${currentQuestionIndex + 1} / ${quizData.length} 題`;
+                questionText.textContent = currentQuestion.question;
+
+                const existingBtn = questionHeader.querySelector('.read-aloud-btn');
+                if (existingBtn) existingBtn.remove();
+                questionHeader.appendChild(makeReadButton('唸讀題目', () => `題目：${currentQuestion.question}`, '朗讀題目'));
+
+                for (const key in currentQuestion.options) {
+                    const optionLabel = document.createElement('label');
+                    optionLabel.classList.add('option-label');
+                    optionLabel.setAttribute('data-option-key', key);
+
+                    const contentWrapper = document.createElement('div');
+                    contentWrapper.className = 'flex items-center';
+
+                    const radioInput = document.createElement('input');
+                    radioInput.type = 'radio';
+                    radioInput.name = 'option';
+                    radioInput.value = key;
+                    radioInput.classList.add('custom-radio');
+
+                    const text = document.createElement('span');
+                    text.className = 'option-text';
+                    text.textContent = `${key}. ${currentQuestion.options[key]}`;
+
+                    contentWrapper.appendChild(radioInput);
+                    contentWrapper.appendChild(text);
+                    optionLabel.appendChild(contentWrapper);
+                    optionLabel.appendChild(makeReadButton(`唸讀選項 ${key}`, () => currentQuestion.options[key], '朗讀選項', { choice: key }));
+
+                    optionLabel.addEventListener('click', () => {
+                        if (submitAnswerBtn.classList.contains('hidden')) return;
+                        if (optionLabel.classList.contains('eliminated')) return;
+                        if (selectedOptionElement) selectedOptionElement.classList.remove('selected');
+                        optionLabel.classList.add('selected');
+                        selectedOptionElement = optionLabel;
+                        radioInput.checked = true;
+                    });
+                    optionsContainer.appendChild(optionLabel);
+                }
+            }
+
+            function resetQuestionState() {
+                optionsContainer.innerHTML = '';
+                feedbackSection.innerHTML = '';
+                feedbackSection.classList.add('hidden');
+                submitAnswerBtn.classList.remove('hidden');
+                nextQuestionBtn.classList.add('hidden');
+                selectedOptionElement = null;
+            }
+
+            /* 找出提示要標示的證據句：段落內與 evidence.sentence 重疊的句子 */
+            function findEvidenceSentences(ev) {
+                if (!ev || !ev.paragraph || !ev.sentence) return [];
+                const target = ev.sentence.replace(/[\s，。！？、；：「」『』,]/g, '');
+                return Array.from(articleContent.querySelectorAll(`.sentence[data-p="${ev.paragraph}"]`)).filter(span => {
+                    const t = span.textContent.replace(/[\s，。！？、；：「」『』,]/g, '');
+                    return t.length > 0 && (target.includes(t) || t.includes(target));
+                });
+            }
+
+            function scrollArticleTo(el) {
+                if (!el) return;
+                setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+            }
+
+            function showHint(level) {
+                const q = quizData[currentQuestionIndex];
+                const ev = q.evidence || {};
+                let message;
+                clearHintMarks();
+                setArticleOpen(true, `提示第 ${level} 層自動開啟`);
+                if (level === 1) {
+                    if (ev.paragraph) {
+                        message = `回到第 ${ev.paragraph} 段再讀一次，找找看和題目有關的句子。`;
+                        const p = articleContent.querySelector(`p[data-p="${ev.paragraph}"]`);
+                        if (p) { p.classList.add('hint-paragraph'); scrollArticleTo(p); }
+                    } else {
+                        message = '回到文章再讀一次，找找看和題目有關的句子。';
+                    }
+                } else {
+                    const spans = findEvidenceSentences(ev);
+                    message = '答案就在文章裡標成橘色的句子，讀完再選一次。';
+                    spans.forEach(s => s.classList.add('evidence-sentence'));
+                    scrollArticleTo(spans[0]);
+                }
+                logEvent('給提示', { question: currentQuestionIndex + 1, detail: `第 ${level} 層：${message}` });
+
+                feedbackSection.innerHTML = '';
+                feedbackSection.className = 'fb fb-hint mb-4';
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-2';
+                const para = document.createElement('p');
+                para.className = 'text-base';
+                para.innerHTML = `<span class="pill">提示</span>`;
+                para.appendChild(document.createTextNode(`再想想看！${message}`));
+                row.appendChild(para);
+                row.appendChild(makeReadButton('唸讀提示', () => message, '朗讀提示'));
+                feedbackSection.appendChild(row);
+                feedbackSection.classList.remove('hidden');
+            }
+
+            function hintAvailable(level) {
+                const ev = quizData[currentQuestionIndex].evidence;
+                if (level === 1) return true;
+                if (level === 2) return findEvidenceSentences(ev).length > 0;
+                return false;
+            }
+
+            function handleSubmitAnswer() {
+                const selectedRadio = optionsContainer.querySelector('input[name="option"]:checked');
+                if (!selectedRadio) { showTemporaryAlert('請選擇一個答案！'); return; }
+                const selectedAnswer = selectedRadio.value;
+                const currentQuestion = quizData[currentQuestionIndex];
+                const st = qStats[currentQuestionIndex];
+                const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+                st.attempts++;
+                st.choices.push(selectedAnswer);
+                logEvent('作答', { question: currentQuestionIndex + 1, choice: selectedAnswer, correct: isCorrect ? '對' : '錯', detail: `第 ${st.attempts} 次` });
+
+                if (isCorrect) { finishQuestion(true, selectedAnswer); return; }
+
+                const nextLevel = st.hints + 1;
+                if (mode === 'practice' && nextLevel <= MAX_HINTS && hintAvailable(nextLevel)) {
+                    const label = optionsContainer.querySelector(`label[data-option-key="${selectedAnswer}"]`);
+                    if (label) {
+                        label.classList.remove('selected');
+                        label.classList.add('eliminated');
+                        const radio = label.querySelector('input');
+                        radio.checked = false; radio.disabled = true;
+                    }
+                    selectedOptionElement = null;
+                    st.hints = nextLevel;
+                    showHint(nextLevel);
+                    return;
+                }
+                finishQuestion(false, selectedAnswer);
+            }
+
+            function finishQuestion(isCorrect, selectedAnswer) {
+                const currentQuestion = quizData[currentQuestionIndex];
+                const st = qStats[currentQuestionIndex];
+                st.seconds = Math.round((Date.now() - st.shownAt) / 1000);
+                st.finalCorrect = isCorrect;
+                st.firstTry = isCorrect && st.attempts === 1;
+                st.revealed = !isCorrect;
+
+                optionsContainer.querySelectorAll('.option-label').forEach(label => {
+                    label.style.pointerEvents = 'none';
+                    const radio = label.querySelector('input[type="radio"]');
+                    if (radio) radio.disabled = true;
+                    const rb = label.querySelector('.read-aloud-btn');
+                    if (rb) rb.style.pointerEvents = 'auto';
+                });
+
+                const selectedLabel = optionsContainer.querySelector(`label[data-option-key="${selectedAnswer}"]`);
+                feedbackSection.innerHTML = '';
+                const feedbackPara = document.createElement('p');
+                feedbackPara.className = 'text-base font-semibold';
+
+                if (isCorrect) {
+                    feedbackSection.className = 'fb fb-ok mb-4';
+                    if (selectedLabel) selectedLabel.classList.add('correct');
+                    feedbackPara.textContent = st.attempts === 1 ? '答案正確！' : `答對了！你用提示找到了答案（第 ${st.attempts} 次作答）。`;
+                } else {
+                    feedbackSection.className = 'fb fb-no mb-4';
+                    if (selectedLabel) { selectedLabel.classList.remove('eliminated'); selectedLabel.classList.add('incorrect'); }
+                    const correctLabel = optionsContainer.querySelector(`label[data-option-key="${currentQuestion.correctAnswer}"]`);
+                    if (correctLabel) correctLabel.classList.add('correct');
+                    feedbackPara.textContent = '答案錯誤。';
+                }
+                feedbackSection.appendChild(feedbackPara);
+
+                const explanationWrapper = document.createElement('div');
+                explanationWrapper.className = 'flex items-center justify-between gap-2 mt-1';
+                const explanationPara = document.createElement('p');
+                explanationPara.className = 'text-sm';
+                explanationPara.textContent = `詳解：${currentQuestion.explanation}`;
+                explanationWrapper.appendChild(explanationPara);
+                explanationWrapper.appendChild(makeReadButton('唸讀詳解', () => currentQuestion.explanation, '朗讀詳解'));
+                feedbackSection.appendChild(explanationWrapper);
+
+                feedbackSection.classList.remove('hidden');
+                submitAnswerBtn.classList.add('hidden');
+                nextQuestionBtn.classList.remove('hidden');
+                nextQuestionBtn.textContent = (currentQuestionIndex === quizData.length - 1) ? '查看結果' : '下一題';
+            }
+
+            function handleNextQuestion() {
+                stopSpeech();
+                currentQuestionIndex++;
+                if (currentQuestionIndex < quizData.length) { loadQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+                else showScore();
+            }
+
+            function showScore() {
+                clearHintMarks();
+                setPhase('score');
+                quizSection.classList.add('hidden');
+                scoreSection.classList.remove('hidden');
+                const first = qStats.filter(s => s.firstTry).length;
+                const withHint = qStats.filter(s => s.finalCorrect && !s.firstTry).length;
+                $('score-text').textContent = `第一次就答對：${first} / ${quizData.length} 題`;
+                $('score-sub').textContent = mode === 'practice'
+                    ? `用提示後答對：${withHint} 題　·　看詳解：${qStats.filter(s => s.revealed).length} 題`
+                    : `模式：測驗`;
+                $('score-detail').innerHTML = '';
+                qStats.forEach((s, i) => {
+                    const li = document.createElement('li');
+                    const status = s.firstTry ? '✔ 第一次答對' : s.finalCorrect ? `△ 提示 ${s.hints} 次後答對` : '✘ 看詳解';
+                    li.textContent = `第 ${i + 1} 題：${status}（作答 ${s.attempts} 次，回看文章 ${s.lookbacks} 次，${s.seconds} 秒）`;
+                    $('score-detail').appendChild(li);
+                });
+                logEvent('完成測驗', { detail: `第一次答對 ${first} 題，提示後答對 ${withHint} 題` });
+                saveRecord();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function saveRecord() {
+                try {
+                    const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                    all.push({ title: QUIZ.title, student: studentName.value.trim(), mode, startedAt: session.startedAt.toISOString(), summary: summaryRows(), log: eventLog });
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(all.slice(-50)));
+                } catch (e) { /* 無法存取瀏覽器儲存空間時略過，仍可下載 CSV */ }
+            }
+
+            /* ---------- CSV 匯出 ---------- */
+            function summaryRows() {
+                return quizData.map((q, i) => {
+                    const s = qStats[i];
+                    return {
+                        題號: i + 1, 題目: q.question, 正確答案: q.correctAnswer, 作答順序: s.choices.join('→'),
+                        作答次數: s.attempts, 使用提示: s.hints, 回看文章次數: s.lookbacks, 第一次答對: s.firstTry ? '是' : '否',
+                        最後答對: s.finalCorrect ? '是' : '否', 作答秒數: s.seconds
+                    };
+                });
+            }
+            function csvCell(v) {
+                const s = v === undefined || v === null ? '' : String(v);
+                return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+            }
+            function toCSV(headers, rows) {
+                return '﻿' + [headers.join(','), ...rows.map(r => headers.map(h => csvCell(r[h])).join(','))].join('\r\n');
+            }
+            function download(filename, text) {
+                const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+            function fileStem() {
+                const d = session.startedAt;
+                const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+                const who = studentName.value.trim().replace(/[\\/:*?"<>|]/g, '') || '未填姓名';
+                const title = QUIZ.title.replace(/[\\/:*?"<>|]/g, '');
+                return `${title}_${who}_${stamp}`;
+            }
+            function downloadSummary() {
+                const base = { 姓名: studentName.value.trim(), 文章: QUIZ.title, 模式: modeLabel(), 開始時間: session.startedAt.toLocaleString('zh-TW', { hour12: false }) };
+                const rows = summaryRows().map(r => ({ ...base, ...r }));
+                download(`${fileStem()}_作答摘要.csv`, toCSV(['姓名', '文章', '模式', '開始時間', '題號', '題目', '正確答案', '作答順序', '作答次數', '使用提示', '回看文章次數', '第一次答對', '最後答對', '作答秒數'], rows));
+            }
+            function downloadLog() {
+                const who = studentName.value.trim();
+                const rows = eventLog.map(e => ({ 姓名: who, 時間: e.time, 經過秒數: e.sec, 事件: e.type, 段落: e.paragraph, 句子: e.sentence, 題號: e.question, 選項: e.choice, 是否正確: e.correct, 內容: e.text || e.detail }));
+                download(`${fileStem()}_操作紀錄.csv`, toCSV(['姓名', '時間', '經過秒數', '事件', '段落', '句子', '題號', '選項', '是否正確', '內容'], rows));
+            }
+
+            function restartQuiz() {
+                stopSpeech();
+                setPhase('reading');
+                interactiveColumn.classList.add('hidden');
+                quizSection.classList.add('hidden');
+                scoreSection.classList.add('hidden');
+
+                renderArticle();
+                addParagraphReadAloudButtons();
+                segmentSentences();
+                initializeArticle();
+
+                nextQuestionBtn.textContent = '下一題';
+                clearInterval(countdownInterval);
+
+                speechRate = 1;
+                speechRateSlider.value = 1;
+                speechRateValue.textContent = '1.0x';
+                applyFont(DEFAULT_FONT, DEFAULT_LINE);
+                settingsPanel.classList.add('hidden');
+                modeSelect.disabled = false;
+                modeSelect.title = '';
+                newSession();
+                window.scrollTo({ top: 0 });
+            }
+
+            function applyFont(size, line) {
+                fontSizeSlider.value = size;
+                lineHeightSlider.value = line;
+                articleContent.style.setProperty('--article-font-size', `${size}px`);
+                articleContent.style.setProperty('--article-line-height', line);
+                $('font-size-value').textContent = `${size}px`;
+                $('line-height-value').textContent = Number(line).toFixed(2).replace(/0$/, '');
+            }
+
+            function buildCopyText() {
+                let text = QUIZ.title + '\n\n';
+                QUIZ.paragraphs.forEach(p => { text += p + '\n\n'; });
+                text += '--- 測驗題目 ---\n\n';
+                quizData.forEach((quiz, index) => {
+                    text += `${index + 1}. ${quiz.question}\n`;
+                    for (const key in quiz.options) text += `   ${key}. ${quiz.options[key]}\n`;
+                    text += '\n';
+                });
+                return text.trim();
+            }
+            function flashCopied() {
+                const btn = $('copy-content-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '已複製！';
+                btn.disabled = true;
+                setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 2000);
+            }
+            function legacyCopy(text) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.top = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                let ok = false;
+                try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+                document.body.removeChild(textarea);
+                if (ok) flashCopied(); else showTemporaryAlert('複製失敗，您的瀏覽器可能不支援此功能。');
+            }
+            function handleCopyContent() {
+                const text = buildCopyText();
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(flashCopied).catch(() => legacyCopy(text));
+                } else {
+                    legacyCopy(text);
+                }
+            }
+
+            function showTemporaryAlert(message) {
+                const tempAlert = document.createElement('div');
+                tempAlert.textContent = message;
+                Object.assign(tempAlert.style, {
+                    position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                    backgroundColor: 'var(--bad-bg)', color: 'var(--bad)', padding: '1rem', borderRadius: '0.5rem',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: '1000'
+                });
+                document.body.appendChild(tempAlert);
+                setTimeout(() => tempAlert.remove(), 2000);
+            }
+
+            function initializeEventListeners() {
+                nextParagraphBtn.addEventListener('click', showNextParagraph);
+                startQuizBtn.addEventListener('click', startQuiz);
+                submitAnswerBtn.addEventListener('click', handleSubmitAnswer);
+                nextQuestionBtn.addEventListener('click', handleNextQuestion);
+                $('restart-quiz-btn').addEventListener('click', restartQuiz);
+                $('copy-content-btn').addEventListener('click', handleCopyContent);
+                $('download-summary-btn').addEventListener('click', downloadSummary);
+                $('download-log-btn').addEventListener('click', downloadLog);
+                toggleArticleBtn.addEventListener('click', () => setArticleOpen(!body.classList.contains('article-open'), '學生按顯示文章'));
+                $('close-article-btn').addEventListener('click', () => { setArticleOpen(false, '學生按回到題目'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+                settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); settingsPanel.classList.toggle('hidden'); });
+                document.addEventListener('click', (e) => {
+                    if (!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
+                        settingsPanel.classList.add('hidden');
+                    }
+                });
+
+                fontSizeSlider.addEventListener('input', () => applyFont(fontSizeSlider.value, lineHeightSlider.value));
+                fontSizeSlider.addEventListener('change', () => logEvent('調整字體', { detail: `${fontSizeSlider.value}px` }));
+                lineHeightSlider.addEventListener('input', () => applyFont(fontSizeSlider.value, lineHeightSlider.value));
+                lineHeightSlider.addEventListener('change', () => logEvent('調整行距', { detail: lineHeightSlider.value }));
+                modeSelect.addEventListener('change', () => {
+                    mode = modeSelect.value;
+                    session.mode = mode;
+                    logEvent('切換模式', { detail: modeLabel() });
+                });
+
+                // 點一下：唸句子；連點兩下：劃／取消重點
+                articleContent.addEventListener('click', (e) => {
+                    const targetSentence = e.target.closest('.sentence');
+                    if (!targetSentence) return;
+                    const where = { paragraph: targetSentence.dataset.p, sentence: targetSentence.dataset.s, question: quizStage(), text: targetSentence.textContent };
+                    const clickTimeoutId = targetSentence.dataset.clickTimeout;
+                    if (clickTimeoutId) {
+                        clearTimeout(parseInt(clickTimeoutId, 10));
+                        targetSentence.removeAttribute('data-click-timeout');
+                        targetSentence.classList.toggle('highlight');
+                        logEvent(targetSentence.classList.contains('highlight') ? '劃重點' : '取消重點', where);
+                    } else {
+                        const newTimeoutId = setTimeout(() => {
+                            if (document.body.contains(targetSentence)) {
+                                logEvent('朗讀句子', where);
+                                speak(targetSentence.textContent, {
+                                    onstart: () => {
+                                        document.querySelectorAll('.reading-underline').forEach(el => el.classList.remove('reading-underline'));
+                                        targetSentence.classList.add('reading-underline');
+                                    },
+                                    onend: () => targetSentence.classList.remove('reading-underline')
+                                });
+                            }
+                            targetSentence.removeAttribute('data-click-timeout');
+                        }, 250);
+                        targetSentence.dataset.clickTimeout = newTimeoutId;
+                    }
+                });
+                // 防止連點兩下時選取文字或放大畫面
+                articleContent.addEventListener('dblclick', (e) => { if (e.target.closest('.sentence')) e.preventDefault(); });
+                articleContent.style.touchAction = 'manipulation';
+
+                speechRateSlider.addEventListener('input', (e) => {
+                    speechRate = parseFloat(e.target.value);
+                    speechRateValue.textContent = `${speechRate.toFixed(1)}x`;
+                });
+                speechRateSlider.addEventListener('change', () => logEvent('調整語速', { detail: `${speechRate.toFixed(1)}x` }));
+            }
+
+            renderArticle();
+            addParagraphReadAloudButtons();
+            segmentSentences();
+            initializeEventListeners();
+            initializeArticle();
+            applyFont(DEFAULT_FONT, DEFAULT_LINE);
+        });
+    </script>
+</body>
+</html>
