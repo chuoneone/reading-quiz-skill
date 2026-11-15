@@ -15,7 +15,7 @@
 - 設定裡可調報讀語速、字體大小、行距
 
 **作答**
-- 讀完後畫面換到題目；右上角「顯示文章」可回看原文（電腦左右並排，手機全螢幕）
+- 讀完後畫面換到題目；右上角「顯示文章」會跳出原文視窗，視窗上方同時顯示題目和提示，不會擠壓題目畫面
 - 題目、選項、詳解、提示都可以報讀
 - **練習模式**：答錯不直接公布答案，先給分層提示
   1. 「回到第 N 段再讀一次」，該段加框
@@ -32,14 +32,13 @@
 
 ## 安裝
 
-把 `reading-quiz` 資料夾複製到 Claude Code 的 skills 資料夾：
+直接 clone 到 Claude Code 的 skills 資料夾：
 
 ```bash
-git clone https://github.com/chuoneone/reading-quiz-skill.git
+git clone https://github.com/chuoneone/reading-quiz-skill.git ~/.claude/skills/reading-quiz
 ```
 
-- Windows：複製到 `C:\Users\<你的帳號>\.claude\skills\reading-quiz`
-- macOS／Linux：複製到 `~/.claude/skills/reading-quiz`
+Windows 的 `~` 是 `C:\Users\<你的帳號>`。
 
 需要 Python 3（產生網頁用，不需另外安裝套件）。
 
@@ -57,10 +56,10 @@ Claude 會：
 也可以自己寫 JSON，直接執行：
 
 ```bash
-python reading-quiz/scripts/build_page.py reading-quiz/examples/會說話的路.json 輸出.html
+python scripts/build_page.py examples/會說話的路.json 輸出.html
 ```
 
-資料檔格式見 [`reading-quiz/SKILL.md`](reading-quiz/SKILL.md) 的「資料檔規格」，範例見 [`reading-quiz/examples/會說話的路.json`](reading-quiz/examples/會說話的路.json)。
+資料檔格式見 [`SKILL.md`](SKILL.md) 的「資料檔規格」，範例見 [`examples/會說話的路.json`](examples/會說話的路.json)。
 
 ## 配色
 

@@ -132,13 +132,22 @@
         .phase-quiz #article-section .reading-only { display: none; }
         .quiz-only { display: none; }
         .phase-quiz .quiz-only { display: flex; }
-        @media (min-width: 768px) {
-            .phase-quiz.article-open #app { max-width: 76rem; display: grid; grid-template-columns: 3fr 2fr; gap: 1.75rem; align-items: start; }
-            .phase-quiz.article-open #article-section { position: sticky; top: 4.5rem; max-height: calc(100vh - 5.5rem); overflow-y: auto; margin: 0; }
+        /* 作答時的「顯示文章」：浮在題目上方的視窗，不改變題目版面 */
+        #article-backdrop { display: none; }
+        .phase-quiz.article-open { overflow: hidden; }
+        .phase-quiz.article-open #article-backdrop { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(28, 43, 57, 0.45); }
+        .phase-quiz.article-open #article-section {
+            display: flex; flex-direction: column; position: fixed; z-index: 40; margin: 0; padding: 0; overflow: hidden;
+            top: 4.5rem; bottom: 1.5rem; left: 50%; transform: translateX(-50%); width: min(48rem, calc(100vw - 2rem));
+            box-shadow: 0 20px 50px rgba(28, 43, 57, 0.25);
         }
+        #article-modal-head { gap: 0.75rem; align-items: flex-start; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1.5px solid var(--line); background: var(--surface2); }
+        .phase-quiz.article-open #article-body { flex: 1; min-height: 0; overflow-y: auto; padding: 1.5rem 2rem; }
         @media (max-width: 767px) {
             .card { padding: 1.25rem; }
-            .phase-quiz.article-open #article-section { position: fixed; inset: 0; z-index: 40; overflow-y: auto; border-radius: 0; margin: 0; padding-top: 4.5rem; }
+            .phase-quiz.article-open #article-section { top: 4rem; bottom: 0; width: 100%; border-radius: var(--radius) var(--radius) 0 0; }
+            #article-modal-head { padding: 0.85rem 1rem; }
+            .phase-quiz.article-open #article-body { padding: 1.25rem; }
         }
     </style>
 </head>
@@ -187,10 +196,15 @@
 
     <div id="app">
         <div id="article-section" class="card mb-8">
-            <div class="quiz-only justify-between items-center mb-4">
-                <span class="text-sm muted">原文（作答時可以回來找答案）</span>
-                <button id="close-article-btn" class="btn btn-outline" style="padding:0.45rem 1rem;font-size:0.9rem">回到題目</button>
+            <div id="article-modal-head" class="quiz-only" role="dialog" aria-label="原文">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs muted">原文　·　找到答案後按「回到題目」</p>
+                    <p id="modal-question" class="font-semibold mt-1"></p>
+                    <p id="modal-hint" class="text-sm mt-1 hidden" style="color:var(--hint)"></p>
+                </div>
+                <button id="close-article-btn" class="btn btn-primary flex-shrink-0" style="padding:0.5rem 1rem;font-size:0.9rem">回到題目</button>
             </div>
+            <div id="article-body">
             <h1 id="article-title" class="text-3xl font-bold mb-5 text-center"></h1>
 
             <details id="tips" class="tips p-4 mb-6 reading-only" open>
@@ -220,7 +234,9 @@
                 <button id="start-quiz-btn" class="btn btn-primary w-full hidden">讀完了，開始作答</button>
             </div>
             <p id="article-source" class="text-xs muted mt-4 text-right hidden"></p>
+            </div>
         </div>
+        <div id="article-backdrop"></div>
 
         <div id="interactive-column" class="hidden">
             <div id="quiz-section" class="card hidden">
@@ -527,6 +543,8 @@
                 logEvent('顯示題目', { question: currentQuestionIndex + 1 });
                 questionCounter.textContent = `第 ${currentQuestionIndex + 1} / ${quizData.length} 題`;
                 questionText.textContent = currentQuestion.question;
+                $('modal-question').textContent = `第 ${currentQuestionIndex + 1} 題：${currentQuestion.question}`;
+                $('modal-hint').classList.add('hidden');
 
                 const existingBtn = questionHeader.querySelector('.read-aloud-btn');
                 if (existingBtn) existingBtn.remove();
@@ -612,6 +630,11 @@
                     scrollArticleTo(spans[0]);
                 }
                 logEvent('給提示', { question: currentQuestionIndex + 1, detail: `第 ${level} 層：${message}` });
+
+                const modalHint = $('modal-hint');
+                modalHint.innerHTML = '<span class="pill">提示</span>';
+                modalHint.appendChild(document.createTextNode(message));
+                modalHint.classList.remove('hidden');
 
                 feedbackSection.innerHTML = '';
                 feedbackSection.className = 'fb fb-hint mb-4';
@@ -892,7 +915,11 @@
                 $('download-summary-btn').addEventListener('click', downloadSummary);
                 $('download-log-btn').addEventListener('click', downloadLog);
                 toggleArticleBtn.addEventListener('click', () => setArticleOpen(!body.classList.contains('article-open'), '學生按顯示文章'));
-                $('close-article-btn').addEventListener('click', () => { setArticleOpen(false, '學生按回到題目'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+                $('close-article-btn').addEventListener('click', () => setArticleOpen(false, '學生按回到題目'));
+                $('article-backdrop').addEventListener('click', () => setArticleOpen(false, '學生點視窗外面'));
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && body.classList.contains('article-open')) setArticleOpen(false, '學生按 Esc');
+                });
 
                 settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); settingsPanel.classList.toggle('hidden'); });
                 document.addEventListener('click', (e) => {
